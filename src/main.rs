@@ -2,6 +2,9 @@ use std::env;
 use dotenvy::dotenv;
 use diesel::{PgConnection, Connection};
 use diesel::prelude::*;
+#[macro_use] extern crate rocket;
+use rocket::serde::Serialize;
+use rocket::serde::json::Json;
 
 pub mod models;
 pub mod schema;
@@ -17,20 +20,31 @@ fn create_db_connection() -> PgConnection {
       .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
-fn main() {
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+struct RecipeResult {
+    recipes: Vec<Recipe>,
+    count: usize,
+}
+
+#[get("/recipes")]
+fn get_published_recipes() -> Json<RecipeResult> {
     use schema::recipes::dsl::*;
 
-    let connection = &mut create_db_connection();
-    let results = recipes
+    let mut db = create_db_connection();
+
+    let items = recipes
         .filter(published.eq(true))
         .limit(5)
-        .load::<Recipe>(connection)
+        .load::<Recipe>(&mut db)
         .expect("Error loading posts");
 
-    println!("Displaying {} posts", results.len());
-    for post in results {
-        println!("{}", post.title);
-        println!("-----------\n");
-        println!("{}", post.body);
-    }
+    let count = items.len();
+
+    Json(RecipeResult { recipes: items, count })
+}
+
+#[launch]
+fn rocket() -> _ {
+  rocket::build().mount("/", routes![get_published_recipes])
 }
