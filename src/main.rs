@@ -3,8 +3,7 @@ use dotenvy::dotenv;
 use diesel::{PgConnection, Connection};
 use diesel::prelude::*;
 #[macro_use] extern crate rocket;
-use rocket::serde::Serialize;
-use rocket::serde::json::Json;
+use rocket::serde::{Serialize, json::Json};
 
 pub mod models;
 pub mod schema;
